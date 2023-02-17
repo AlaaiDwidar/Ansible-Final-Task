@@ -1,0 +1,63 @@
+---
+# tasks file for Nexus
+
+    - name: Update Packages
+      apt:
+        update_cache: true
+
+    - name: Install wget Package
+      apt:
+        name: wget
+        state: present
+
+    - name: install openJDK-8
+      apt:
+        name: openjdk-8-jdk
+        state: present
+        update_cache: true
+
+    - name: create Nexus directory
+      file:
+        path: "/nexus"
+        state: directory
+
+    - name: Download Nexus
+      get_url:
+        url: https://download.sonatype.com/nexus/3/nexus-3.47.1-01-unix.tar.gz
+        dest: /nexus/nexus.tar.gz
+
+    - name: extract nexus
+      unarchive:
+        remote_src: true
+        src: /nexus/nexus.tar.gz
+        dest: /nexus
+
+    # - name: rename nexus directory
+    #   shell: "mv /nexus/nexus-3* /nexus/nexus"
+
+    - name: add user for nexus
+      user:
+        name: nexus
+        
+    - name: change nexus directory owner to the newly created user
+      command: "chown -R nexus:nexus /nexus/nexus"
+        
+    - name: change sonatype-work directory owner to the newly created user
+      command: "chown -R nexus:nexus /nexus/sonatype-work" 
+
+    - name: "Uncomment the line"
+      replace:
+        path: /nexus/nexus/bin/nexus.rc
+        regexp: '#run_as_user=""'
+        replace: 'run_as_user="nexus"'
+
+    - name: create nexus systemd unit file
+      copy:
+        src: ./nexus.txt
+        dest: /etc/systemd/system/nexus.service
+        
+    
+    - name: Start service nexus
+      service:
+          name: nexus
+          state: started
